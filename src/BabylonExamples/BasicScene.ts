@@ -29,7 +29,7 @@ constructor(private canvas: HTMLCanvasElement){
     this.CreateImpostors();
     this.CreateHoops();
     //LEAVE BALL OUT UNTIL WE FIGURE OUT WHY PHYSICS DONT WORK ON IT
-    //this.CreateBall();
+    this.CreateBall();
 
     this.engine.runRenderLoop(()=>{
         this.scene.render();
@@ -39,8 +39,7 @@ constructor(private canvas: HTMLCanvasElement){
 /*Creates the initial scene, with the following elements:
 - Camera of type FreeCamera, at 0,1,-5
 - Light of type HemisphericLight, at 0,1,0
-- Ground Mesh, dimensions 10x10
-- Sphere Mesh, diameter: 1, position 0,1,0*/
+*/
 CreateScene(): Scene {
     const scene = new Scene(this.engine);
     // const camera = new FreeCamera("camera", new Vector3(0,1,-5), this.scene);
@@ -53,6 +52,8 @@ CreateScene(): Scene {
         );
 
     hemiLight.intensity = 5;
+
+    //ENVIRONMENT SKYBOX FOR LATER
     // const envTex = CubeTexture.CreateFromPrefilteredData(
     //     "./environment/sky.env",
     //     scene
@@ -76,17 +77,17 @@ CreateScene(): Scene {
     return scene;
 }
 
+//FIRST PERSON CAMERA
 CreateController(): void {
     const camera = new FreeCamera("camera", new Vector3(0,1,-6), this.scene);
     camera.attachControl();
 
     camera.applyGravity = true;
     camera.checkCollisions = true;
-
     camera.ellipsoid = new Vector3(0.5, 0.5, 0.5);
 
     camera.minZ = 1;
-    camera.speed = 0.35;
+    camera.speed = 0.25;
     camera.angularSensibility = 3500;
 
     camera.keysUp.push(87);
@@ -124,6 +125,7 @@ CreateGroundMaterial(): StandardMaterial {
     return groundMat;
 }
 
+//IMPORT BASKETBALL HOOP MESHES
 async CreateHoops(): Promise<void> {
     const models = await SceneLoader.ImportMeshAsync(
     "",
@@ -131,7 +133,6 @@ async CreateHoops(): Promise<void> {
     "hoop.glb"
     );
     const hoop = models.meshes[0];
-    hoop.checkCollisions = true;
     const hoop2 = hoop.clone("hoop2", null, false);
     hoop.position = new Vector3(0, 0, 12);
     hoop.scaling.scaleInPlace(0.35);
@@ -144,6 +145,8 @@ async CreateHoops(): Promise<void> {
     }
 
 }
+
+//IMPORT BASKETBALL MESH
 
 async CreateBall(): Promise<void>{
     const models = await SceneLoader.ImportMeshAsync(
@@ -178,30 +181,21 @@ CreateImpostors(): void{
         {mass: 0, restitution: 0.5}
     );
 
-    const sphere = MeshBuilder.CreateSphere("sphere", { diameter: .5 });
-    sphere.position = new Vector3(0, 6, 1.8);
-
-    sphere.physicsImpostor = new PhysicsImpostor(
-      sphere,
-      PhysicsImpostor.SphereImpostor,
-      { mass: 1, restitution: 1 }
-    );
+    ground.checkCollisions = true;
 
 }
-
-Ball(): void {
+//SPHERE MESH PHYSICS TEST
+// Ball(): void {
         
-    const sphere = MeshBuilder.CreateSphere("sphere", { diameter: .5 });
-    sphere.position = new Vector3(0, 6, 1.8);
+//     const sphere = MeshBuilder.CreateSphere("sphere", { diameter: .5 });
+//     sphere.position = new Vector3(0, 6, 1.8);
 
-    sphere.physicsImpostor = new PhysicsImpostor(
-      sphere,
-      PhysicsImpostor.SphereImpostor,
-      { mass: 1, restitution: 1 }
-    );
+//     sphere.physicsImpostor = new PhysicsImpostor(
+//       sphere,
+//       PhysicsImpostor.SphereImpostor,
+//       { mass: 1, restitution: 1 }
+//     );
 
-    
-
-}
+// }
 
 }
