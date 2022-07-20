@@ -24,22 +24,14 @@ export class BasicScene {
 constructor(private canvas: HTMLCanvasElement){
     this.engine = new Engine(this.canvas, true);
     this.scene = this.CreateScene();
-    this.CreateController();
-    this.CreateGround();
-    this.CreateImpostors();
-    this.CreateHoops();
-    //LEAVE BALL OUT UNTIL WE FIGURE OUT WHY PHYSICS DONT WORK ON IT
-    this.CreateBall();
+
 
     this.engine.runRenderLoop(()=>{
         this.scene.render();
     });
 
 }
-/*Creates the initial scene, with the following elements:
-- Camera of type FreeCamera, at 0,1,-5
-- Light of type HemisphericLight, at 0,1,0
-*/
+/** Creates the initial scene **/
 CreateScene(): Scene {
     const scene = new Scene(this.engine);
     // const camera = new FreeCamera("camera", new Vector3(0,1,-5), this.scene);
@@ -54,14 +46,14 @@ CreateScene(): Scene {
     hemiLight.intensity = 5;
 
     //ENVIRONMENT SKYBOX FOR LATER
-    // const envTex = CubeTexture.CreateFromPrefilteredData(
-    //     "./environment/sky.env",
-    //     scene
-    // );
+    const envTex = CubeTexture.CreateFromPrefilteredData(
+        "./environment/sky.env",
+        scene
+    );
 
-    // scene.environmentTexture = envTex;
+    scene.environmentTexture = envTex;
 
-    // scene.createDefaultSkybox(envTex, true);
+    scene.createDefaultSkybox(envTex, true);
 
     scene.onPointerDown = (evt) => {
         if (evt.button === 0) this.engine.enterPointerlock();
@@ -72,8 +64,18 @@ CreateScene(): Scene {
         new Vector3(0,-9.81,0),
         new CannonJSPlugin(true, 10, CANNON)
     );
-
     scene.collisionsEnabled = true;    
+
+    this.CreateController();
+    this.CreateGround();
+    this.CreateImpostors();
+    this.CreateHoops();
+    //LEAVE BALL OUT UNTIL WE FIGURE OUT WHY PHYSICS DONT WORK ON IT
+    //this.CreateBall();
+    this.Ball();
+
+
+
     return scene;
 }
 
@@ -183,19 +185,51 @@ CreateImpostors(): void{
 
     ground.checkCollisions = true;
 
+    const limiter01 = MeshBuilder.CreateBox("limiter1",
+    {width:15.24,
+    height: 5});
+
+    limiter01.position.z = 15.25;
+    limiter01.physicsImpostor = new PhysicsImpostor(
+        limiter01,
+        PhysicsImpostor.BoxImpostor
+    );
+    limiter01.isVisible = false;
+    limiter01.checkCollisions = true;
+
+    const limiter02 = limiter01.clone();
+    limiter02.position.z = -15.25;
+
+    const limiter03 = MeshBuilder.CreateBox("limiter3",
+    {width: 5,
+    height: 5,
+    depth: 28.65});
+
+    limiter03.position.x = 10;
+    limiter03.physicsImpostor = new PhysicsImpostor(
+        limiter03,
+        PhysicsImpostor.BoxImpostor
+    );
+    limiter03.isVisible = false;
+    limiter03.checkCollisions = true;
+
+    const limiter04 = limiter03.clone();
+    limiter04.position.x = -10;
+
 }
-//SPHERE MESH PHYSICS TEST
-// Ball(): void {
+
+// SPHERE MESH PHYSICS TEST
+Ball(): void {
         
-//     const sphere = MeshBuilder.CreateSphere("sphere", { diameter: .5 });
-//     sphere.position = new Vector3(0, 6, 1.8);
+    const sphere = MeshBuilder.CreateSphere("sphere", { diameter: .5 });
+    sphere.position = new Vector3(0, 6, 1.8);
 
-//     sphere.physicsImpostor = new PhysicsImpostor(
-//       sphere,
-//       PhysicsImpostor.SphereImpostor,
-//       { mass: 1, restitution: 1 }
-//     );
+    sphere.physicsImpostor = new PhysicsImpostor(
+      sphere,
+      PhysicsImpostor.SphereImpostor,
+      { mass: 1, restitution: 1 }
+    );
 
-// }
+}
 
 }
