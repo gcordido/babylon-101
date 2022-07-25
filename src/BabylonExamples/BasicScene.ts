@@ -13,6 +13,7 @@ import {
     CannonJSPlugin,
     ActionManager,
     ExecuteCodeAction,
+    AbstractMesh,
 } from "@babylonjs/core";
 import { AdvancedDynamicTexture } from "@babylonjs/gui/2D/advancedDynamicTexture";
 import { Image } from "@babylonjs/gui"
@@ -25,6 +26,7 @@ export class BasicScene {
     scene:Scene;
     engine:Engine;
     camera:FreeCamera;
+    ball: AbstractMesh;
     //add ball
 
 
@@ -32,6 +34,7 @@ constructor(private canvas: HTMLCanvasElement){
     this.engine = new Engine(this.canvas, true);
     this.scene = this.CreateScene();
     this.camera = this.CreateController();
+    this.ball = this.CreateBall().then(ball => { this.ball = ball })
 
 
     this.engine.runRenderLoop(()=>{
@@ -75,8 +78,7 @@ CreateScene(): Scene {
     this.CreateGround();
     this.CreateImpostors();
     this.CreateHoops();
-    this.CreateBall();
-
+    
     scene.onPointerDown = (evt, pickInfo) => {
         if (evt.button === 0) this.engine.enterPointerlock();
         if (evt.button === 1) this.engine.exitPointerlock();
@@ -181,14 +183,13 @@ async CreateHoops(): Promise<void> {
 
 //IMPORT BASKETBALL MESH
 
-async CreateBall(): Promise<void>{
+async CreateBall(): Promise<AbstractMesh>{
     const models = await SceneLoader.ImportMeshAsync(
         "",
         "./models/",
         "ball.glb",
     );
     const ball = models.meshes[1];
-    console.log(typeof ball);
     ball.position = new Vector3(0,6,1.25);
     ball.scaling.scaleInPlace(.02);
 
@@ -225,6 +226,7 @@ async CreateBall(): Promise<void>{
     //     );
         
     // }
+    return ball;
 
 }
 
