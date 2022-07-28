@@ -74,7 +74,7 @@ CreateScene(): Scene {
     scene.collisionsEnabled = true;
 
     //hinders performance but creates ray to the center of the scene 
-    scene.constantlyUpdateMeshUnderPointer = true;    
+    //scene.constantlyUpdateMeshUnderPointer = true;    
 
     /*Creates the remaining components of the Scene
         - Ground Component:
@@ -85,7 +85,15 @@ CreateScene(): Scene {
     this.CreateGround();
     this.CreateImpostors();
     this.CreateHoops();
-    
+        
+    const target = new Image("grab", "./images/reach.png");
+    target.stretch = Image.STRETCH_UNIFORM;
+    target.width = "15%"
+    target.height = "15%"
+    const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("FullscreenUI");
+    advancedTexture.addControl(target);
+    let ballIsHeld = false;
+
     /*Stars the first onPointerDown instance to get into the game.
         - The first click will lock the pointer for the camera to pan around.
         -  
@@ -98,25 +106,25 @@ CreateScene(): Scene {
         //     console.log("picked the ball");
         //     if(this.ball){this.PickBall(this.ball);}
         // }
-
-        console.log(pickInfo.pickedMesh?.id);
         //Currently starts the PickBall() method when the ball is clicked.
-        if(pickInfo.pickedMesh?.id === "basketball"){
+        if(this.BallCheck()){
+            target.isVisible = false;
+            ballIsHeld = true;
             this.PickBall();
         }
     }
-    
+
     /*Starts an onPointMove instance to being the game functionality.
         - Ideally, the rayCast will detect when the camera is pointing at the ball and 
         start the PickBall() function on a TBD KeyDown event. */
-    scene.onPointerMove = (evt, pickInfo) => {
-        const rayCast = this.camera.getForwardRay();
-        if(this.ball){
-            const ballIsSeen = (rayCast.intersectsMesh(this.ball));
-            if (ballIsSeen.pickedMesh?.id === "basketball"){
-
-                console.log("hovered the ball")}
+    scene.onPointerMove = () => {
+        //Create function for boolean value
+        if(this.BallCheck() && !ballIsHeld){
+            target.isVisible = true;
+            console.log("target shows up");
         }
+        else target.isVisible = false;
+
     }
     
     // this.camera.onCollide = function (collidedMesh) {
@@ -230,7 +238,6 @@ async CreateHoops(): Promise<void> {
 /* CreateBall() Method
     - Imports a 3D basketball model.
 */
-
 async CreateBall(): Promise<AbstractMesh>{
     const models = await SceneLoader.ImportMeshAsync(
         "",
@@ -244,7 +251,7 @@ async CreateBall(): Promise<AbstractMesh>{
     ball.physicsImpostor = new PhysicsImpostor(
         ball,
         PhysicsImpostor.SphereImpostor,
-        {mass: 1, restitution: 0.8, ignoreParent: true, friction: 1},
+        {mass: 1, restitution: 0.5, ignoreParent: true, friction: 1},
         this.scene
     );
 
@@ -256,17 +263,28 @@ async CreateBall(): Promise<AbstractMesh>{
 
 }
 
+BallCheck(): boolean{
+    let isBallOnSight = false;
+    const rayCast = this.camera.getForwardRay();
+    if(this.ball){
+        const ballIsSeen = (rayCast.intersectsMesh(this.ball));
+        if (ballIsSeen.pickedMesh?.id === "basketball"){
+            isBallOnSight = true;
+        }   
+    }
+    return isBallOnSight;   
+}
 
 PickBall(): void {
 
     if(this.ball){
         //attaches ball mesh to camera
         this.ball.setParent(this.camera);
-        this.ball.position.y = 0.5;
+        this.ball.position.y = 0;
         this.ball.position.z = 3;
-        //this.ball.physicsImpostor?.dispose();
-        //this.ball.physicsImpostor = null;
-        this.ball.checkCollisions = true;
+        this.ball.physicsImpostor?.dispose();
+        this.ball.physicsImpostor = null;
+        //this.ball.checkCollisions = true;
 
         this.scene.actionManager.registerAction(
             new ExecuteCodeAction(
@@ -275,47 +293,35 @@ PickBall(): void {
                     parameter: "r"
                 },
                 () => {
-                    console.log("r was pressed")
-                if(this.ball){
-                this.ball.setParent(null);
-                this.ball.physicsImpostor = new PhysicsImpostor(
-                    this.ball,
-                    PhysicsImpostor.SphereImpostor,
-                    {mass: 1, restitution: 0.8, ignoreParent: true, friction: 1},
-                    this.scene
-                );}
-                this.ball?.physicsImpostor?.applyForce(
-                    new Vector3(0, 300, 200),
-                    this.ball.getAbsolutePosition().add(new Vector3(0,2,0))
-                )}
+                    if(this.ball){
+                        this.ball.setParent(null);
+                        this.ball.physicsImpostor = new PhysicsImpostor(
+                            this.ball,
+                            PhysicsImpostor.SphereImpostor,
+                            {mass: 1, restitution: 0.5, ignoreParent: true, friction: 1},
+                            this.scene
+                        );
+                        this.ball.checkCollisions = true;
+                    }
+                    //BUG: IMPULSE IS APPLIED WITH DIRECTION, NOT SOLELY MAGNITUDE. MUST FIND A WAY TO APPLY IN 
+                    //CAMERA'S DIRECTION RATHER THAN A STRICT Z VALUE.
+                    this.ball?.applyImpulse(new Vector3(0, 7, 7), this.ball.getAbsolutePosition());
+                }
             )
         )
-    this.scene.actionManager.registerAction(
-        new ExecuteCodeAction(
-            {
-                trigger: ActionManager.OnKeyUpTrigger,
-                parameter: "r"
-            },
-            () => {
-                this.ball?.physicsImpostor?.applyForce(
-                    new Vector3(0,0,0),
-                    this.ball.getAbsolutePosition().add(new Vector3(0,2,0))
-                )
-            }
-        )
-    )
-
-
     }
+    return;
 
 }
 
-
 CreateImpostors(): void{
-    const ground = MeshBuilder.CreateGround("ground", {
+    const ground = MeshBuilder.CreateBox("ground", {
         width: 15.24,
-        height: 28.65}
+        height: 2,
+        depth: 28.65},
     );
+
+    ground.position.y = -1;
 
     ground.isVisible = false;
 
@@ -329,7 +335,7 @@ CreateImpostors(): void{
 
     const limiter01 = MeshBuilder.CreateBox("limiter1",
     {width:15.24,
-    height: 100,
+    height: 15,
     depth:2});
 
     limiter01.position.z = 15.24;
@@ -345,7 +351,7 @@ CreateImpostors(): void{
 
     const limiter03 = MeshBuilder.CreateBox("limiter3",
     {width: 5,
-    height: 100,
+    height: 15,
     depth: 28.65});
 
     limiter03.position.x = 10;
@@ -358,7 +364,23 @@ CreateImpostors(): void{
 
     const limiter04 = limiter03.clone();
     limiter04.position.x = -10;
+    
+    const boardLimiter = MeshBuilder.CreateBox("board1",
+    {width: 3,
+    height: 2,
+    depth: .25});
+    boardLimiter.position.z = 11.5;
+    boardLimiter.position.y = 4.5;
+    boardLimiter.isVisible = false;
 
+    boardLimiter.physicsImpostor = new PhysicsImpostor(
+        limiter01,
+        PhysicsImpostor.BoxImpostor
+        );
+    boardLimiter.checkCollisions = true;
+
+    const boardLimiter02 = boardLimiter.clone();
+    boardLimiter02.position.z = -11.5;
 }
 
 }
