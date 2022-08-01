@@ -126,31 +126,6 @@ CreateScene(): Scene {
         else target.isVisible = false;
 
     }
-    
-    // this.camera.onCollide = function (collidedMesh) {
-    //     if(collidedMesh.id === "basketball"){
-    //         console.log("collided with ball");
-    //     }
-    // }
-
-    //shows that we are aiming at the ball correctly (clarifies where the pointer is)
-    // scene.onPointerMove = (evt, pickInfo) => {
-    //     // if (pickInfo.pickedMesh?.id === "basketball"){
-    //     //     //show pointer target
-    //     //     target.isVisible = true;
-    //     //     console.log("pointed at ball");
-    //     // }
-    //     // else target.isVisible = false;
-    // } 
-
-    // const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI(
-    //         "FullscreenUI"
-    //     );
-    // const target = new Image("target", targetImageDataURL);
-    // target.width = "30%";
-    // target.height = '30%';
-    // target.stretch = Image.STRETCH_UNIFORM;
-    // advancedTexture.addControl(target);
 
     return scene;
 }
@@ -173,11 +148,6 @@ CreateController(): FreeCamera {
     camera.keysDown.push(83);
     camera.keysRight.push(68);
 
-    // camera.onCollide = function (collidedMesh) {
-    //     if(collidedMesh.id === "basketball"){
-    //         console.log("collided with ball");
-    //     }
-    // }
     return camera;
 
 }
@@ -256,8 +226,6 @@ async CreateBall(): Promise<AbstractMesh>{
     );
 
     ball.actionManager = new ActionManager(this.scene);
-    //Needed for onCollide with camera
-    // ball.checkCollisions = true;
 
     return ball;
 
@@ -303,9 +271,13 @@ PickBall(): void {
                         );
                         this.ball.checkCollisions = true;
                     }
-                    //BUG: IMPULSE IS APPLIED WITH DIRECTION, NOT SOLELY MAGNITUDE. MUST FIND A WAY TO APPLY IN 
-                    //CAMERA'S DIRECTION RATHER THAN A STRICT Z VALUE.
-                    this.ball?.applyImpulse(new Vector3(0, 7, 7), this.ball.getAbsolutePosition());
+                    //Sends the ball in the camera's facing direction. Needs more force at the moment.
+                    const forwardVector = this.camera.getDirection(Vector3.Forward());
+                    const upVector = new Vector3(0,10,0);
+                    forwardVector.scaleInPlace(7);
+                    forwardVector.add(upVector);
+
+                    this.ball?.applyImpulse(forwardVector, this.ball.getAbsolutePosition());
                 }
             )
         )
