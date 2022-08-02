@@ -14,7 +14,6 @@ import {
     ActionManager,
     ExecuteCodeAction,
     AbstractMesh,
-    Ray
 } from "@babylonjs/core";
 import { AdvancedDynamicTexture } from "@babylonjs/gui/2D/advancedDynamicTexture";
 import { Image } from "@babylonjs/gui"
@@ -40,12 +39,17 @@ constructor(private canvas: HTMLCanvasElement){
     });
 
 }
-/** Creates the initial scene **/
+/** CreateScene method
+ *  - Creates the overall scene, including the following elements:
+ *      > HemisphericLight
+ *      > Skybox (by an imported environment texture)
+ *      > Physics Engine instancing
+ *      > Ready to Grab Indicator
+ * @returns Scene
+ */
 CreateScene(): Scene {
     const scene = new Scene(this.engine);
-    // const camera = new FreeCamera("camera", new Vector3(0,1,-5), this.scene);
-    // camera.attachControl();
-    // camera.speed = .25;
+
     scene.actionManager = new ActionManager();
     const hemiLight = new HemisphericLight("hemiLight",
         new Vector3(0,1,0), 
@@ -71,10 +75,7 @@ CreateScene(): Scene {
         new Vector3(0,-9.81,0),
         new CannonJSPlugin(true, 100, CANNON)
     );
-    scene.collisionsEnabled = true;
-
-    //hinders performance but creates ray to the center of the scene 
-    //scene.constantlyUpdateMeshUnderPointer = true;    
+    scene.collisionsEnabled = true; 
 
     /*Creates the remaining components of the Scene
         - Ground Component:
@@ -85,7 +86,7 @@ CreateScene(): Scene {
     this.CreateGround();
     this.CreateImpostors();
     this.CreateHoops();
-        
+    //Grabbing indicator
     const target = new Image("grab", "./images/reach.png");
     target.stretch = Image.STRETCH_UNIFORM;
     target.width = "15%"
@@ -96,17 +97,11 @@ CreateScene(): Scene {
 
     /*Stars the first onPointerDown instance to get into the game.
         - The first click will lock the pointer for the camera to pan around.
-        -  
+        - Then checks if the ball is in front of the camera, a click will grab it.
     */
     scene.onPointerDown = (evt, pickInfo) => {
         if (evt.button === 0) this.engine.enterPointerlock();
         if (evt.button === 1) this.engine.exitPointerlock();
-        //condition to start ballHeld
-        // if (pickInfo.pickedMesh?.id === "basketball") {
-        //     console.log("picked the ball");
-        //     if(this.ball){this.PickBall(this.ball);}
-        // }
-        //Currently starts the PickBall() method when the ball is clicked.
         if(this.BallCheck()){
             target.isVisible = false;
             ballIsHeld = true;
@@ -114,9 +109,10 @@ CreateScene(): Scene {
         }
     }
 
-    /*Starts an onPointMove instance to being the game functionality.
-        - Ideally, the rayCast will detect when the camera is pointing at the ball and 
-        start the PickBall() function on a TBD KeyDown event. */
+    /*Starts an onPointMove instance to detect the ball.
+        - Showcases the target if the ball is being detected by the camera's forward ray
+        - Calls the BallCheck() method
+    */
     scene.onPointerMove = () => {
         //Create function for boolean value
         if(this.BallCheck() && !ballIsHeld){
@@ -124,25 +120,27 @@ CreateScene(): Scene {
             console.log("target shows up");
         }
         else target.isVisible = false;
-
     }
-
     return scene;
 }
 
-//FIRST PERSON CAMERA
+/** CreateController method
+ *  - Creates a FreeCamera object, with gravity and collisions enabled.
+ *  - Sets up the WASD keys to control/move the camera view.
+ * 
+ * @returns FreeCamera
+ */
 CreateController(): FreeCamera {
     const camera = new FreeCamera("camera", new Vector3(0,1,-6), this.scene);
     camera.attachControl();
-
+    //Camera properties
     camera.applyGravity = true;
     camera.checkCollisions = true;
     camera.ellipsoid = new Vector3(0.5, 0.5, 0.5);
-
     camera.minZ = 1;
     camera.speed = 0.25;
     camera.angularSensibility = 3500;
-
+    //Enables the WASD keys to control the camera movement. Each value represents the keycode for a specific key.
     camera.keysUp.push(87);
     camera.keysLeft.push(65);
     camera.keysDown.push(83);
@@ -151,9 +149,11 @@ CreateController(): FreeCamera {
     return camera;
 
 }
-/* CreateGround Method
-    - Creates a ground mesh
-*/
+/** CreateGround method
+ *  - Creates a ground mesh of dimensions 15.25 by 28.65 meters.
+ *  - Calls the CreateGroundMaterial method to add material to the ground mesh.
+ * 
+ */
 CreateGround(): void {
     const ground = MeshBuilder.CreateGround(
         "ground", 
@@ -164,7 +164,7 @@ CreateGround(): void {
     ground.material = this.CreateGroundMaterial();
 }
 /* CreateGroundMaterial Method
-    - Creates a Material for the ground mesh using one of the assets.
+    - Creates a Material for the ground mesh using an imported asset.
 */
 CreateGroundMaterial(): StandardMaterial {
     const groundMat = new StandardMaterial("groundMat", this.scene);
@@ -178,13 +178,13 @@ CreateGroundMaterial(): StandardMaterial {
         tex.uScale = 4;
         tex.vScale = 4;
     });
-
     return groundMat;
 }
 
-/* CreateHoops Method
-    - Import a 3D Hoop Mesh, clones it and relocates them to the ends of the court.
-*/
+/** CreateHoops method
+ *  - Import a 3D Hoop Mesh, clones it and relocates them to the ends of the court.
+ * @return Promise void 
+ */
 async CreateHoops(): Promise<void> {
     const models = await SceneLoader.ImportMeshAsync(
     "",
@@ -193,27 +193,33 @@ async CreateHoops(): Promise<void> {
     );
     const hoop = models.meshes[0];
     const hoop2 = hoop.clone("hoop2", null, false);
+    //Hoop #1 properties
     hoop.position = new Vector3(0, 0, 12);
     hoop.scaling.scaleInPlace(0.35);
     
     if(hoop2){
+        //Hoop #2 properties and rotation
         hoop2.position = new Vector3(0,0,-12);
         hoop2.scaling.scaleInPlace(0.35);
         const axis = new Vector3(0,1,0);
         hoop2.rotate(axis, Math.PI);
     }
-
 }
 
-/* CreateBall() Method
-    - Imports a 3D basketball model.
-*/
+/** CreateBall method
+ *  - Imports a 3D basketball model.
+ *  - Creates a physics impostor for the ball mesh
+ *  - Creates an action manager so the ball can be interacted with
+ * @returns Promise<AbstractMesh>
+ */
 async CreateBall(): Promise<AbstractMesh>{
     const models = await SceneLoader.ImportMeshAsync(
         "",
         "./models/",
         "ball.glb",
     );
+    //The Mesh is imported in an array, where the first element is the root (used for pointer/manipulation purposes, but not editing the mesh itself)
+    //In order to properly work with the mesh, we select the next element which actually does represent the mesh itself.
     const ball = models.meshes[1];
     ball.position = new Vector3(0,6,1.25);
     ball.scaling.scaleInPlace(.02);
@@ -231,6 +237,11 @@ async CreateBall(): Promise<AbstractMesh>{
 
 }
 
+/** BallCheck method
+ *  - Grabs a ray in the direction the camera is facing and detects whether
+ * it crosses the ball mesh. If it does, it returns a true value.
+ * @returns isBallOnSight (boolean value)
+ */
 BallCheck(): boolean{
     let isBallOnSight = false;
     const rayCast = this.camera.getForwardRay();
@@ -242,7 +253,12 @@ BallCheck(): boolean{
     }
     return isBallOnSight;   
 }
-
+/** PickBall method
+ *  - Sets the camera as the ball mesh's parent (attaches) and resets the ball to a visible position in front of the camera
+ *  - Disposes the physics impostor to avoid collision errors
+ *  - Detects if a launch key is pressed ("r"), and throws the ball forward.
+ * @returns void
+ */
 PickBall(): void {
 
     if(this.ball){
@@ -252,8 +268,8 @@ PickBall(): void {
         this.ball.position.z = 3;
         this.ball.physicsImpostor?.dispose();
         this.ball.physicsImpostor = null;
-        //this.ball.checkCollisions = true;
 
+        //Add an action manager to register if a key is pressed to carry out an action after (throw ball)
         this.scene.actionManager.registerAction(
             new ExecuteCodeAction(
                 {
@@ -262,6 +278,7 @@ PickBall(): void {
                 },
                 () => {
                     if(this.ball){
+                        //Eliminates the ball's parent and reassigns a physics impostor to the mesh
                         this.ball.setParent(null);
                         this.ball.physicsImpostor = new PhysicsImpostor(
                             this.ball,
@@ -271,12 +288,13 @@ PickBall(): void {
                         );
                         this.ball.checkCollisions = true;
                     }
-                    //Sends the ball in the camera's facing direction. Needs more force at the moment.
+                    //Sends the ball in the camera's facing direction. Throw not powerful enough yet, must tweak.
+                    //Gets a forward vector from the camera, and adds it to an up vector.
                     const forwardVector = this.camera.getDirection(Vector3.Forward());
                     const upVector = new Vector3(0,10,0);
                     forwardVector.scaleInPlace(7);
                     forwardVector.add(upVector);
-
+                    //Applies an impulse in the direction of the resulting vector from the ball's absolute position.
                     this.ball?.applyImpulse(forwardVector, this.ball.getAbsolutePosition());
                 }
             )
@@ -285,7 +303,11 @@ PickBall(): void {
     return;
 
 }
-
+/** CreateImpostors method
+ *  - Creates the necessary physics impostors: Hoops, Ground and Wall ("Limiters")
+ *  - All impostors are visible by default, but as we only need them to enact physics we turn them invisible.
+ *  @returns void
+ */
 CreateImpostors(): void{
     const ground = MeshBuilder.CreateBox("ground", {
         width: 15.24,
@@ -294,17 +316,15 @@ CreateImpostors(): void{
     );
 
     ground.position.y = -1;
-
     ground.isVisible = false;
-
     ground.physicsImpostor = new PhysicsImpostor(
         ground,
         PhysicsImpostor.BoxImpostor,
         {mass: 0, restitution: 0.5}
     );
-
     ground.checkCollisions = true;
-
+    
+    //Wall #1
     const limiter01 = MeshBuilder.CreateBox("limiter1",
     {width:15.24,
     height: 15,
@@ -317,10 +337,11 @@ CreateImpostors(): void{
     );
     limiter01.isVisible = false;
     limiter01.checkCollisions = true;
-
+    // Wall #2
     const limiter02 = limiter01.clone();
     limiter02.position.z = -15.24;
 
+    //Wall #3
     const limiter03 = MeshBuilder.CreateBox("limiter3",
     {width: 5,
     height: 15,
@@ -333,10 +354,11 @@ CreateImpostors(): void{
     );
     limiter03.isVisible = false;
     limiter03.checkCollisions = true;
-
+    //Wall #4
     const limiter04 = limiter03.clone();
     limiter04.position.x = -10;
     
+    //Hoop #1
     const boardLimiter = MeshBuilder.CreateBox("board1",
     {width: 3,
     height: 2,
@@ -350,7 +372,7 @@ CreateImpostors(): void{
         PhysicsImpostor.BoxImpostor
         );
     boardLimiter.checkCollisions = true;
-
+    //Hoop #2
     const boardLimiter02 = boardLimiter.clone();
     boardLimiter02.position.z = -11.5;
 }
