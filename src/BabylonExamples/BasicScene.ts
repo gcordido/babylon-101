@@ -21,7 +21,6 @@ import "@babylonjs/loaders";
 import * as CANNON from "cannon";
 
 /*Declares and exports the BasicScene class, which initializes both the Babylon Scene and the Babylon Engine */
-
 export class BasicScene {
     scene:Scene;
     engine:Engine;
@@ -45,7 +44,7 @@ constructor(private canvas: HTMLCanvasElement){
  *      > Skybox (by an imported environment texture)
  *      > Physics Engine instancing
  *      > Ready to Grab Indicator
- * @returns Scene
+ *  @returns Scene
  */
 CreateScene(): Scene {
     const scene = new Scene(this.engine);
@@ -99,7 +98,7 @@ CreateScene(): Scene {
         - The first click will lock the pointer for the camera to pan around.
         - Then checks if the ball is in front of the camera, a click will grab it.
     */
-    scene.onPointerDown = (evt, pickInfo) => {
+    scene.onPointerDown = (evt) => {
         if (evt.button === 0) this.engine.enterPointerlock();
         if (evt.button === 1) this.engine.exitPointerlock();
         if(this.BallCheck()){
@@ -112,6 +111,7 @@ CreateScene(): Scene {
     /*Starts an onPointMove instance to detect the ball.
         - Showcases the target if the ball is being detected by the camera's forward ray
         - Calls the BallCheck() method
+        - BUG: Image stops showing after the first throw, no matter if the ray is pointed.
     */
     scene.onPointerMove = () => {
         //Create function for boolean value
@@ -127,7 +127,6 @@ CreateScene(): Scene {
 /** CreateController method
  *  - Creates a FreeCamera object, with gravity and collisions enabled.
  *  - Sets up the WASD keys to control/move the camera view.
- * 
  * @returns FreeCamera
  */
 CreateController(): FreeCamera {
@@ -263,11 +262,11 @@ PickBall(): void {
 
     if(this.ball){
         //attaches ball mesh to camera
+        this.ball.physicsImpostor?.dispose();
+        this.ball.physicsImpostor = null;
         this.ball.setParent(this.camera);
         this.ball.position.y = 0;
         this.ball.position.z = 3;
-        this.ball.physicsImpostor?.dispose();
-        this.ball.physicsImpostor = null;
 
         //Add an action manager to register if a key is pressed to carry out an action after (throw ball)
         this.scene.actionManager.registerAction(
@@ -286,19 +285,21 @@ PickBall(): void {
                             {mass: 1, restitution: 0.5, ignoreParent: true, friction: 1},
                             this.scene
                         );
-                        this.ball.checkCollisions = true;
+                        //this.ball.checkCollisions = true;
                     }
                     //Sends the ball in the camera's facing direction. Throw not powerful enough yet, must tweak.
                     //Gets a forward vector from the camera, and adds it to an up vector.
                     const forwardVector = this.camera.getDirection(Vector3.Forward());
-                    const upVector = new Vector3(0,10,0);
+                    const upVector = new Vector3(0,5,0);
                     forwardVector.scaleInPlace(7);
-                    forwardVector.add(upVector);
+
                     //Applies an impulse in the direction of the resulting vector from the ball's absolute position.
-                    this.ball?.applyImpulse(forwardVector, this.ball.getAbsolutePosition());
+                    this.ball?.applyImpulse(forwardVector.add(upVector), this.ball.getAbsolutePosition());
+                    return;
                 }
             )
         )
+
     }
     return;
 
@@ -358,7 +359,7 @@ CreateImpostors(): void{
     const limiter04 = limiter03.clone();
     limiter04.position.x = -10;
     
-    //Hoop #1
+    //Hoop Board #1
     const boardLimiter = MeshBuilder.CreateBox("board1",
     {width: 3,
     height: 2,
@@ -368,13 +369,33 @@ CreateImpostors(): void{
     boardLimiter.isVisible = false;
 
     boardLimiter.physicsImpostor = new PhysicsImpostor(
-        limiter01,
+        boardLimiter,
         PhysicsImpostor.BoxImpostor
         );
     boardLimiter.checkCollisions = true;
-    //Hoop #2
+    //Hoop Board #2
     const boardLimiter02 = boardLimiter.clone();
     boardLimiter02.position.z = -11.5;
+
+    //Hoop Pole #1
+    const postLimiter = MeshBuilder.CreateCylinder("cylinder1", {height: 5, diameter: 0.3});
+    postLimiter.position.z = 12;
+    postLimiter.position.x = -0.05;
+    postLimiter.position.y = 2;
+
+    postLimiter.physicsImpostor = new PhysicsImpostor(
+        postLimiter,
+        PhysicsImpostor.CylinderImpostor
+        );
+    
+    postLimiter.isVisible = false;
+    postLimiter.checkCollisions = true;
+
+    //Hoop Pole #2
+    const postLimiter02 = postLimiter.clone();
+    postLimiter02.position.z = -12;
+
+
 }
 
 }
