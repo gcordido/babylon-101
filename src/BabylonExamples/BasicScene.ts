@@ -26,12 +26,15 @@ export class BasicScene {
     engine:Engine;
     camera:FreeCamera;
     ball?:AbstractMesh;
+    ballIsHeld:boolean;
 
 constructor(private canvas: HTMLCanvasElement){
     this.engine = new Engine(this.canvas, true);
     this.scene = this.CreateScene();
     this.camera = this.CreateController();
     this.CreateBall().then(ball => { this.ball = ball });
+    this.ballIsHeld = false;
+
 
     this.engine.runRenderLoop(()=>{
         this.scene.render();
@@ -92,7 +95,6 @@ CreateScene(): Scene {
     target.height = "15%"
     const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("FullscreenUI");
     advancedTexture.addControl(target);
-    let ballIsHeld = false;
 
     /*Stars the first onPointerDown instance to get into the game.
         - The first click will lock the pointer for the camera to pan around.
@@ -103,7 +105,7 @@ CreateScene(): Scene {
         if (evt.button === 1) this.engine.exitPointerlock();
         if(this.BallCheck()){
             target.isVisible = false;
-            ballIsHeld = true;
+            this.ballIsHeld = true;
             this.PickBall();
         }
     }
@@ -115,7 +117,7 @@ CreateScene(): Scene {
     */
     scene.onPointerMove = () => {
         //Create function for boolean value
-        if(this.BallCheck() && !ballIsHeld){
+        if(this.BallCheck() && !this.ballIsHeld){
             target.isVisible = true;
             console.log("target shows up");
         }
@@ -267,6 +269,7 @@ PickBall(): void {
         this.ball.setParent(this.camera);
         this.ball.position.y = 0;
         this.ball.position.z = 3;
+        this.ballIsHeld = true;
 
         //Add an action manager to register if a key is pressed to carry out an action after (throw ball)
         this.scene.actionManager.registerAction(
@@ -279,6 +282,7 @@ PickBall(): void {
                     if(this.ball){
                         //Eliminates the ball's parent and reassigns a physics impostor to the mesh
                         this.ball.setParent(null);
+                        if(this.ball.physicsImpostor){this.ball.physicsImpostor.dispose();}
                         this.ball.physicsImpostor = new PhysicsImpostor(
                             this.ball,
                             PhysicsImpostor.SphereImpostor,
@@ -292,14 +296,14 @@ PickBall(): void {
                     const forwardVector = this.camera.getDirection(Vector3.Forward());
                     const upVector = new Vector3(0,5,0);
                     forwardVector.scaleInPlace(7);
-
+                    
                     //Applies an impulse in the direction of the resulting vector from the ball's absolute position.
                     this.ball?.applyImpulse(forwardVector.add(upVector), this.ball.getAbsolutePosition());
+                    this.ballIsHeld = false;
                     return;
                 }
             )
         )
-
     }
     return;
 
