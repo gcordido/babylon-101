@@ -89,10 +89,10 @@ CreateScene(): Scene {
     this.CreateImpostors();
     this.CreateHoops();
     //Grabbing indicator
-    const target = new Image("grab", "./images/reach.png");
+    const target = new Image("grab", "./images/hand_fluent.png");
     target.stretch = Image.STRETCH_UNIFORM;
-    target.width = "15%"
-    target.height = "15%"
+    target.width = "20%"
+    target.height = "20%"
     const advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("FullscreenUI");
     advancedTexture.addControl(target);
 
@@ -313,7 +313,7 @@ PickBall(): void {
  *  - All impostors are visible by default, but as we only need them to enact physics we turn them invisible.
  *  @returns void
  */
-CreateImpostors(): void{
+CreateImpostors(): void {
     const ground = MeshBuilder.CreateBox("ground", {
         width: 15.24,
         height: 2,
@@ -398,7 +398,6 @@ CreateImpostors(): void{
     //Hoop Pole #2
     const postLimiter02 = postLimiter.clone();
     postLimiter02.position.z = -12;
-
 
 }
 
